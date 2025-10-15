@@ -3,6 +3,10 @@ package br.com.fiap.BlogAnime.controllers;
 import br.com.fiap.BlogAnime.dto.*;
 import br.com.fiap.BlogAnime.service.AnimeService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,16 +20,28 @@ public class AnimeController {
     @Autowired
     private AnimeService service;
 
-    // ✅ LISTAR TODOS OS ANIMES
+    // ✅ LISTAR TODOS OS ANIMES (AGORA COM PAGINAÇÃO E FILTRO)
     @GetMapping
-    public ResponseEntity<?> listarTodos() {
+    public ResponseEntity<?> listar(
+            @RequestParam(required = false) String titulo,
+            @PageableDefault(size = 10, sort = "titulo", direction = Direction.ASC) Pageable pageable) {
         try {
-            List<AnimeResponseDTO> animes = service.listarTodos();
-            if (animes.isEmpty()) {
-                return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                        .body("Nenhum anime encontrado."); // 204
+            Page<AnimeResponseDTO> pagina;
+
+            // Se o título for informado, aplica o filtro
+            if (titulo != null && !titulo.isEmpty()) {
+                pagina = service.filtrarPorTitulo(titulo, pageable);
+            } else {
+                pagina = service.listarPaginado(pageable);
             }
-            return ResponseEntity.ok(animes); // 200
+
+            if (pagina.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                        .body("Nenhum anime encontrado.");
+            }
+
+            return ResponseEntity.ok(pagina); // 200 OK
+
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao listar animes: " + e.getMessage()); // 500
@@ -37,7 +53,7 @@ public class AnimeController {
     public ResponseEntity<?> buscarPorId(@PathVariable Long id) {
         try {
             AnimeResponseDTO anime = service.buscarPorId(id);
-            return ResponseEntity.ok(anime); // 200
+            return ResponseEntity.ok(anime); // 200 OK
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Anime não encontrado com o ID: " + id); // 404

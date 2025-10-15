@@ -4,6 +4,8 @@ import br.com.fiap.BlogAnime.dto.*;
 import br.com.fiap.BlogAnime.model.Usuario;
 import br.com.fiap.BlogAnime.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
@@ -15,12 +17,24 @@ public class UsuarioService {
     @Autowired
     private UsuarioRepository repository;
 
-    // ✅ LISTAR TODOS OS USUÁRIOS
+    // ✅ LISTAR TODOS (SEM PAGINAÇÃO)
     public List<UsuarioResponseDTO> listarTodos() {
         return repository.findAll()
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    // ✅ LISTAR TODOS (COM PAGINAÇÃO)
+    public Page<UsuarioResponseDTO> listarPaginado(Pageable pageable) {
+        return repository.findAll(pageable)
+                .map(this::toResponse);
+    }
+
+    // ✅ FILTRAR POR NOME (COM PAGINAÇÃO)
+    public Page<UsuarioResponseDTO> filtrarPorNome(String nome, Pageable pageable) {
+        return repository.findByNomeContainingIgnoreCase(nome, pageable)
+                .map(this::toResponse);
     }
 
     // ✅ BUSCAR POR ID
@@ -41,7 +55,7 @@ public class UsuarioService {
         return toResponse(salvo);
     }
 
-    // ✅ EDITAR (ATUALIZAR) USUÁRIO
+    // ✅ ATUALIZAR USUÁRIO
     public UsuarioResponseDTO atualizar(Long id, UsuarioUpdateDTO dto) {
         Usuario usuario = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado com o ID: " + id));
@@ -62,7 +76,7 @@ public class UsuarioService {
         repository.deleteById(id);
     }
 
-    // 🧠 MÉTODO DE CONVERSÃO: ENTITY → RESPONSE DTO
+    // 🧠 CONVERSOR ENTITY → DTO
     private UsuarioResponseDTO toResponse(Usuario usuario) {
         return new UsuarioResponseDTO(
                 usuario.getIdUsuario(),

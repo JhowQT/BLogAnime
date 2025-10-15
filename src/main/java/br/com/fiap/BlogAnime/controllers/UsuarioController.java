@@ -3,6 +3,10 @@ package br.com.fiap.BlogAnime.controllers;
 import br.com.fiap.BlogAnime.dto.*;
 import br.com.fiap.BlogAnime.service.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort.Direction;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,15 +20,27 @@ public class UsuarioController {
     @Autowired
     private UsuarioService service;
 
-    // ✅ LISTAR TODOS OS USUÁRIOS
+    // ✅ LISTAR TODOS (PAGINADO E COM FILTRO)
     @GetMapping
-    public ResponseEntity<?> listarTodos() {
+    public ResponseEntity<?> listar(
+            @RequestParam(required = false) String nome,
+            @PageableDefault(size = 10, sort = "nome", direction = Direction.ASC) Pageable pageable) {
+
         try {
-            List<UsuarioResponseDTO> usuarios = service.listarTodos();
-            if (usuarios.isEmpty()) {
+            Page<UsuarioResponseDTO> pagina;
+
+            if (nome != null && !nome.isEmpty()) {
+                pagina = service.filtrarPorNome(nome, pageable);
+            } else {
+                pagina = service.listarPaginado(pageable);
+            }
+
+            if (pagina.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.NO_CONTENT).body("Nenhum usuário encontrado.");
             }
-            return ResponseEntity.ok(usuarios); // 200 OK
+
+            return ResponseEntity.ok(pagina); // 200 OK
+
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Erro ao listar usuários: " + e.getMessage()); // 500
@@ -36,7 +52,7 @@ public class UsuarioController {
     public ResponseEntity<?> buscarPorId(@PathVariable Long id) {
         try {
             UsuarioResponseDTO usuario = service.buscarPorId(id);
-            return ResponseEntity.ok(usuario); // 200 OK
+            return ResponseEntity.ok(usuario); // 200
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Usuário não encontrado com o ID: " + id); // 404
@@ -46,7 +62,7 @@ public class UsuarioController {
         }
     }
 
-    // ✅ CRIAR NOVO USUÁRIO
+    // ✅ CRIAR NOVO
     @PostMapping
     public ResponseEntity<?> criar(@RequestBody UsuarioCreateDTO dto) {
         try {
@@ -61,12 +77,12 @@ public class UsuarioController {
         }
     }
 
-    // ✅ ATUALIZAR USUÁRIO
+    // ✅ ATUALIZAR
     @PutMapping("/{id}")
     public ResponseEntity<?> atualizar(@PathVariable Long id, @RequestBody UsuarioUpdateDTO dto) {
         try {
             UsuarioResponseDTO atualizado = service.atualizar(id, dto);
-            return ResponseEntity.ok(atualizado); // 200 OK
+            return ResponseEntity.ok(atualizado); // 200
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Usuário não encontrado com o ID: " + id); // 404
@@ -76,12 +92,12 @@ public class UsuarioController {
         }
     }
 
-    // ✅ DELETAR USUÁRIO
+    // ✅ DELETAR
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deletar(@PathVariable Long id) {
         try {
             service.deletar(id);
-            return ResponseEntity.status(HttpStatus.NO_CONTENT).build(); // 204 No Content
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build(); // 204
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Usuário não encontrado com o ID: " + id); // 404

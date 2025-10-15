@@ -4,6 +4,8 @@ import br.com.fiap.BlogAnime.dto.*;
 import br.com.fiap.BlogAnime.model.Anime;
 import br.com.fiap.BlogAnime.repository.AnimeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -16,12 +18,24 @@ public class AnimeService {
     @Autowired
     private AnimeRepository repository;
 
-    // ✅ LISTAR TODOS OS ANIMES
+    // ✅ LISTAR TODOS OS ANIMES (SEM PAGINAÇÃO)
     public List<AnimeResponseDTO> listarTodos() {
         return repository.findAll()
                 .stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    // ✅ LISTAR TODOS OS ANIMES (COM PAGINAÇÃO)
+    public Page<AnimeResponseDTO> listarPaginado(Pageable pageable) {
+        return repository.findAll(pageable)
+                .map(this::toResponse);
+    }
+
+    // ✅ FILTRAR ANIMES POR TÍTULO (COM PAGINAÇÃO)
+    public Page<AnimeResponseDTO> filtrarPorTitulo(String titulo, Pageable pageable) {
+        return repository.findByTituloContainingIgnoreCase(titulo, pageable)
+                .map(this::toResponse);
     }
 
     // ✅ BUSCAR ANIME POR ID
