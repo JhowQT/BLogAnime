@@ -1,77 +1,94 @@
 package br.com.fiap.BlogAnime.controllers;
 
+import br.com.fiap.BlogAnime.dto.*;
+import br.com.fiap.BlogAnime.service.AnimeService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
-
-import br.com.fiap.BlogAnime.model.Anime;
-import br.com.fiap.BlogAnime.repository.AnimeRepository;
-import lombok.extern.slf4j.Slf4j;
-
 @RestController
-@RequestMapping("/")
-@Slf4j
-
+@RequestMapping("/animes")
 public class AnimeController {
 
-
     @Autowired
-    private AnimeRepository animeRepository;
-    
-    @GetMapping("/animes")
-    public List<Anime> ListAnimes(){
-        return animeRepository.findAll();
-    };
-    
-    @PostMapping("/animes")
-    @ResponseStatus(HttpStatus.CREATED)
-    public Anime createAnime(@RequestBody Anime anime){
-        log.info("Você crio uma obra prima: {} " +  anime);
-        return animeRepository.save(anime);
+    private AnimeService service;
+
+    // ✅ LISTAR TODOS OS ANIMES
+    @GetMapping
+    public ResponseEntity<?> listarTodos() {
+        try {
+            List<AnimeResponseDTO> animes = service.listarTodos();
+            if (animes.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NO_CONTENT)
+                        .body("Nenhum anime encontrado."); // 204
+            }
+            return ResponseEntity.ok(animes); // 200
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao listar animes: " + e.getMessage()); // 500
+        }
     }
 
-    @GetMapping("{id}")
-    public Anime getByAnime(@PathVariable Long id){
-        log.info("Buscando anime por Id" + id);
-        return getAnimeById(id);
+    // ✅ BUSCAR ANIME POR ID
+    @GetMapping("/{id}")
+    public ResponseEntity<?> buscarPorId(@PathVariable Long id) {
+        try {
+            AnimeResponseDTO anime = service.buscarPorId(id);
+            return ResponseEntity.ok(anime); // 200
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Anime não encontrado com o ID: " + id); // 404
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao buscar anime: " + e.getMessage()); // 500
+        }
     }
 
-    @DeleteMapping("{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public Anime getByID(@PathVariable Long id){
-        log.info("Buscando anime por Id" + id);
-        return getAnimeById(id);
+    // ✅ CRIAR NOVO ANIME
+    @PostMapping
+    public ResponseEntity<?> criar(@RequestBody AnimeCreateDTO dto) {
+        try {
+            AnimeResponseDTO novoAnime = service.criar(dto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(novoAnime); // 201
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Erro nos dados enviados: " + e.getMessage()); // 400
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao criar anime: " + e.getMessage()); // 500
+        }
     }
 
+    // ✅ ATUALIZAR ANIME
+    @PutMapping("/{id}")
+    public ResponseEntity<?> atualizar(@PathVariable Long id, @RequestBody AnimeUpdateDTO dto) {
+        try {
+            AnimeResponseDTO atualizado = service.atualizar(id, dto);
+            return ResponseEntity.ok(atualizado); // 200
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Anime não encontrado com o ID: " + id); // 404
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao atualizar anime: " + e.getMessage()); // 500
+        }
+    }
 
-
-    @PutMapping("{id}")   
-    public Anime updateAnime(@RequestBody Anime animeUpdate, @PathVariable Long id){
-        log.info("Atualizando o anime {} com id {}", animeUpdate, id);
-        getAnimeById(id);
-        animeUpdate.setIdAnime(id);
-        return animeRepository.save(animeUpdate);
-
-}
-
-    private Anime getAnimeById(Long id) {
-    return animeRepository
-                .findById(id)
-                .orElseThrow(   
-                    () -> new ResponseStatusException(HttpStatus.NOT_FOUND,"Tarefa não encontrada com o id " + id)
-                );
-}
-
+    // ✅ DELETAR ANIME
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deletar(@PathVariable Long id) {
+        try {
+            service.deletar(id);
+            return ResponseEntity.status(HttpStatus.NO_CONTENT).build(); // 204
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("Anime não encontrado com o ID: " + id); // 404
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erro ao deletar anime: " + e.getMessage()); // 500
+        }
+    }
 }
