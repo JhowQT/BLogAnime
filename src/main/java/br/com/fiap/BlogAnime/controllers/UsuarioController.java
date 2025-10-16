@@ -25,7 +25,7 @@ public class UsuarioController {
     @GetMapping
     public ResponseEntity<Page<UsuarioDTO>> listar(
             @RequestParam(required = false) String nome,
-            @PageableDefault(size = 10, sort = "nome", direction = Direction.ASC) Pageable pageable) {
+            @PageableDefault(size = 3, sort = "nome", direction = Direction.ASC) Pageable pageable) {
 
         Page<UsuarioDTO> pagina = (nome != null && !nome.isBlank())
                 ? service.filtrarPorNome(nome, pageable)
