@@ -1,15 +1,12 @@
 package br.com.fiap.BlogAnime.service;
 
-import br.com.fiap.BlogAnime.dto.*;
+import br.com.fiap.BlogAnime.dto.UsuarioDTO;
 import br.com.fiap.BlogAnime.model.Usuario;
 import br.com.fiap.BlogAnime.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 public class UsuarioService {
@@ -17,46 +14,29 @@ public class UsuarioService {
     @Autowired
     private UsuarioRepository repository;
 
-    // ✅ LISTAR TODOS (SEM PAGINAÇÃO)
-    public List<UsuarioResponseDTO> listarTodos() {
-        return repository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
-    }
-
-    // ✅ LISTAR TODOS (COM PAGINAÇÃO)
-    public Page<UsuarioResponseDTO> listarPaginado(Pageable pageable) {
+    public Page<UsuarioDTO> listarPaginado(Pageable pageable) {
         return repository.findAll(pageable)
-                .map(this::toResponse);
+                .map(this::toDTO);
     }
 
-    // ✅ FILTRAR POR NOME (COM PAGINAÇÃO)
-    public Page<UsuarioResponseDTO> filtrarPorNome(String nome, Pageable pageable) {
+    public Page<UsuarioDTO> filtrarPorNome(String nome, Pageable pageable) {
         return repository.findByNomeContainingIgnoreCase(nome, pageable)
-                .map(this::toResponse);
+                .map(this::toDTO);
     }
 
-    // ✅ BUSCAR POR ID
-    public UsuarioResponseDTO buscarPorId(Long id) {
-        Optional<Usuario> usuario = repository.findById(id);
-        return usuario.map(this::toResponse)
+    public UsuarioDTO buscarPorId(Long id) {
+        Usuario usuario = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado com o ID: " + id));
+        return toDTO(usuario);
     }
 
-    // ✅ CRIAR NOVO USUÁRIO
-    public UsuarioResponseDTO criar(UsuarioCreateDTO dto) {
-        Usuario usuario = new Usuario();
-        usuario.setNome(dto.getNome());
-        usuario.setEmail(dto.getEmail());
-        usuario.setSenha(dto.getSenha());
-
+    public UsuarioDTO criar(UsuarioDTO dto) {
+        Usuario usuario = toEntity(dto);
         Usuario salvo = repository.save(usuario);
-        return toResponse(salvo);
+        return toDTO(salvo);
     }
 
-    // ✅ ATUALIZAR USUÁRIO
-    public UsuarioResponseDTO atualizar(Long id, UsuarioUpdateDTO dto) {
+    public UsuarioDTO atualizar(Long id, UsuarioDTO dto) {
         Usuario usuario = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Usuário não encontrado com o ID: " + id));
 
@@ -64,11 +44,9 @@ public class UsuarioService {
         if (dto.getEmail() != null) usuario.setEmail(dto.getEmail());
         if (dto.getSenha() != null) usuario.setSenha(dto.getSenha());
 
-        Usuario atualizado = repository.save(usuario);
-        return toResponse(atualizado);
+        return toDTO(repository.save(usuario));
     }
 
-    // ✅ DELETAR USUÁRIO
     public void deletar(Long id) {
         if (!repository.existsById(id)) {
             throw new RuntimeException("Usuário não encontrado com o ID: " + id);
@@ -76,12 +54,21 @@ public class UsuarioService {
         repository.deleteById(id);
     }
 
-    // 🧠 CONVERSOR ENTITY → DTO
-    private UsuarioResponseDTO toResponse(Usuario usuario) {
-        return new UsuarioResponseDTO(
+    private UsuarioDTO toDTO(Usuario usuario) {
+        return new UsuarioDTO(
                 usuario.getIdUsuario(),
                 usuario.getNome(),
-                usuario.getEmail()
+                usuario.getEmail(),
+                usuario.getSenha()
+        );
+    }
+
+    private Usuario toEntity(UsuarioDTO dto) {
+        return new Usuario(
+                dto.getIdUsuario(),
+                dto.getNome(),
+                dto.getEmail(),
+                dto.getSenha()
         );
     }
 }

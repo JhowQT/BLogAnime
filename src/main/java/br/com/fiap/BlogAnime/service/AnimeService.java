@@ -1,6 +1,6 @@
 package br.com.fiap.BlogAnime.service;
 
-import br.com.fiap.BlogAnime.dto.*;
+import br.com.fiap.BlogAnime.dto.AnimeDTO;
 import br.com.fiap.BlogAnime.model.Anime;
 import br.com.fiap.BlogAnime.repository.AnimeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,58 +8,35 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
 @Service
 public class AnimeService {
 
     @Autowired
     private AnimeRepository repository;
 
-    // ✅ LISTAR TODOS OS ANIMES (SEM PAGINAÇÃO)
-    public List<AnimeResponseDTO> listarTodos() {
-        return repository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
-    }
-
-    // ✅ LISTAR TODOS OS ANIMES (COM PAGINAÇÃO)
-    public Page<AnimeResponseDTO> listarPaginado(Pageable pageable) {
+    public Page<AnimeDTO> listarPaginado(Pageable pageable) {
         return repository.findAll(pageable)
-                .map(this::toResponse);
+                .map(this::toDTO);
     }
 
-    // ✅ FILTRAR ANIMES POR TÍTULO (COM PAGINAÇÃO)
-    public Page<AnimeResponseDTO> filtrarPorTitulo(String titulo, Pageable pageable) {
+    public Page<AnimeDTO> filtrarPorTitulo(String titulo, Pageable pageable) {
         return repository.findByTituloContainingIgnoreCase(titulo, pageable)
-                .map(this::toResponse);
+                .map(this::toDTO);
     }
 
-    // ✅ BUSCAR ANIME POR ID
-    public AnimeResponseDTO buscarPorId(Long id) {
-        Optional<Anime> anime = repository.findById(id);
-        return anime.map(this::toResponse)
+    public AnimeDTO buscarPorId(Long id) {
+        Anime anime = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Anime não encontrado com o ID: " + id));
+        return toDTO(anime);
     }
 
-    // ✅ CRIAR NOVO ANIME
-    public AnimeResponseDTO criar(AnimeCreateDTO dto) {
-        Anime anime = new Anime();
-        anime.setTitulo(dto.getTitulo());
-        anime.setDescricao(dto.getDescricao());
-        anime.setAutor(dto.getAutor());
-        anime.setAnoLancamento(dto.getAnoLancamento());
-        anime.setGenero(dto.getGenero());
-
+    public AnimeDTO criar(AnimeDTO dto) {
+        Anime anime = toEntity(dto);
         Anime salvo = repository.save(anime);
-        return toResponse(salvo);
+        return toDTO(salvo);
     }
 
-    // ✅ ATUALIZAR (EDITAR) ANIME
-    public AnimeResponseDTO atualizar(Long id, AnimeUpdateDTO dto) {
+    public AnimeDTO atualizar(Long id, AnimeDTO dto) {
         Anime anime = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Anime não encontrado com o ID: " + id));
 
@@ -69,11 +46,9 @@ public class AnimeService {
         if (dto.getAnoLancamento() != null) anime.setAnoLancamento(dto.getAnoLancamento());
         if (dto.getGenero() != null) anime.setGenero(dto.getGenero());
 
-        Anime atualizado = repository.save(anime);
-        return toResponse(atualizado);
+        return toDTO(repository.save(anime));
     }
 
-    // ✅ DELETAR ANIME
     public void deletar(Long id) {
         if (!repository.existsById(id)) {
             throw new RuntimeException("Anime não encontrado com o ID: " + id);
@@ -81,15 +56,25 @@ public class AnimeService {
         repository.deleteById(id);
     }
 
-    // 🧠 MÉTODO DE CONVERSÃO: ENTITY → RESPONSE DTO
-    private AnimeResponseDTO toResponse(Anime anime) {
-        return new AnimeResponseDTO(
+    private AnimeDTO toDTO(Anime anime) {
+        return new AnimeDTO(
                 anime.getIdAnime(),
                 anime.getTitulo(),
                 anime.getDescricao(),
                 anime.getAutor(),
                 anime.getAnoLancamento(),
                 anime.getGenero()
+        );
+    }
+
+    private Anime toEntity(AnimeDTO dto) {
+        return new Anime(
+                dto.getIdAnime(),
+                dto.getTitulo(),
+                dto.getDescricao(),
+                dto.getAutor(),
+                dto.getAnoLancamento(),
+                dto.getGenero()
         );
     }
 }
